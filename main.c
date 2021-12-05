@@ -58,19 +58,25 @@ void IndicatorLed_Blink(unsigned char times, unsigned short delay);
 
 int main(void)
 {
+	// Acknowledge message. Sent when driver is ready for new data package.
+	char *ack = "OK\n";
+	
+	// Buffer for LEDs colors.
+	struct RGB leds[WS_LEDS_NUMBER];
+	
 	IndicatorLed_Init();
 	WS_Init();
 	USART_Init(MYUBRR);
 	IndicatorLed_Blink(1,1000);
-	char *ack = "OK\n";
 	
-	struct RGB leds[WS_LEDS_NUMBER];
+	// Turn off all LEDs, while initializing.
 	for (unsigned char i = 0; i < WS_LEDS_NUMBER; i++)
 	{
 		WS_SendRGBcolor(0, 0, 0);
 	}
 	
-	wdt_enable(WDTO_2S); // watchdog enabled - 2sec
+	// Watchdog enabled - 2sec. In case of problems with service on operating system.
+	wdt_enable(WDTO_2S);
 	
 	while(1)
 	{
@@ -89,7 +95,8 @@ int main(void)
 		}
 		WS_SendReset();
 		
-		wdt_reset(); // watchdog reset
+		// Watchdog reset, when everything was OK.
+		wdt_reset(); 
 	}
 }
 
@@ -119,8 +126,8 @@ void USART_Send(unsigned char data)
 
 void USART_SendString(char *text, unsigned char strlen) 
 {
-	unsigned char i;
-	for (i = 0; i < strlen; i++) {
+	for (unsigned char i = 0; i < strlen; i++) 
+	{
 		USART_Send(*(text++));
 	}
 }
@@ -137,31 +144,39 @@ void IndicatorLed_Init()
 
 void WS_SendZeroBit()
 {
-	WS_PORT |= (1<<WS_PIN); //set high on pin PD0 220ns~380ns
+	//set high on pin PD0 220ns~380ns
+	WS_PORT |= (1<<WS_PIN); 
 	waitNops(4);
-	WS_PORT &= ~(1<<WS_PIN); //set low on pin PD0 580ns~1600ns
+	
+	//set low on pin PD0 580ns~1600ns
+	WS_PORT &= ~(1<<WS_PIN); 
 	waitNops(10);
 }
 
 void WS_SendOneBit()
 {
-	WS_PORT |= (1<<WS_PIN); //set high on pin PD0 580ns~1600ns
+	//set high on pin PD0 580ns~1600ns
+	WS_PORT |= (1<<WS_PIN); 
 	waitNops(10);
-	WS_PORT &= ~(1<<WS_PIN); //set low on pin PD0 220ns~420ns
+	
+	//set low on pin PD0 220ns~420ns
+	WS_PORT &= ~(1<<WS_PIN); 
 	waitNops(4);
 }
 
 void WS_SendReset()
 {
-	WS_PORT &= ~(1<<WS_PIN); //set low on pin PD0
+	//set low on pin PD0
+	WS_PORT &= ~(1<<WS_PIN); 
 	_delay_us(300);
 }
 
+// Send one color. This needs to be done bit-by-bit (software implementation of one way communication).
 void WS_SendColorPart(unsigned char color)
 {
 	unsigned char mask = 0b10000000;
 	
-	for(unsigned char i = 0; i < 8; i++)
+	for (unsigned char i = 0; i < 8; i++)
 	{
 		if(color & mask)
 			WS_SendOneBit();
